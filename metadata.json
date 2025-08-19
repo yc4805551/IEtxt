@@ -1,6 +1,5 @@
 {
-  "name": "Information Processing Assistant",
-  "description": "An assistant to correct writing and organize fragmented notes.",
-  "requestFramePermissions": [],
-  "prompt": ""
+  "name": "智能写作与笔记助手",
+  "description": "一个由 AI 驱动的助手，可以帮助您润色文章、整理笔记，并基于 PDF 文档内容进行对话。",
+  "requestFramePermissions": []
 }

@@ -1,0 +1,6 @@
+{
+  "name": "Information Processing Assistant",
+  "description": "An assistant to correct writing and organize fragmented notes.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

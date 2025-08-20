@@ -1,0 +1,68 @@
+# 工作流名称
+name: Deploy to GitHub Pages
+
+# 触发条件：在推送到 main 分支时自动运行
+on:
+  push:
+    branches:
+      - main
+  # 允许您从 Actions 选项卡手动运行此工作流程
+  workflow_dispatch:
+
+# 权限设置：允许此工作流写入 GitHub Pages 的部署
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 作业：定义一个名为 "deploy" 的作业
+jobs:
+  deploy:
+    # 作业环境：指定部署到 GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # 运行环境：使用最新的 Ubuntu 系统
+    runs-on: ubuntu-latest
+    # 步骤：定义作业中要执行的命令
+    steps:
+      # 第一步：检出代码
+      # 使用 actions/checkout@v4 拉取你的仓库代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 第二步：设置 Node.js 环境
+      # 使用 actions/setup-node@v4 设置 Node.js 20.x 版本
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 第三步：安装依赖并构建项目
+      # - npm ci: 更快、更可靠地安装依赖
+      # - npm run build: 执行 package.json 中定义的构建命令
+      #   重要：在这里通过 env 将 GitHub Secret 注入到构建过程中
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+
+      # 第四步：设置 GitHub Pages
+      # 配置 Pages 以准备部署
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 第五步：上传构建产物
+      # 将构建输出的 dist 目录上传为 Pages 的构件
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      # 第六步：部署到 GitHub Pages
+      # 执行部署，完成后会生成网站链接
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

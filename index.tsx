@@ -3,9 +3,15 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
 import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Configure the worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjs.version}/build/pdf.worker.mjs`;
+
+// Configure the worker for react-pdf using the locally installed package
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 // Define structures for the two different analysis modes
 interface WritingAnalysis {
@@ -188,7 +194,10 @@ const App = () => {
   };
 
   const handleGetWritingSuggestions = async () => {
-    if (!text || !apiKey) return;
+    if (!text || !apiKey) {
+        setError("API 密钥未配置，无法执行分析。");
+        return;
+    };
     resetStateForAnalysis();
     setMode('writing');
 
@@ -264,7 +273,11 @@ const App = () => {
   };
 
   const handleProceedWithOrganization = async () => {
-    if (!text || !apiKey) return;
+    if (!text || !apiKey) {
+        setError("API 密钥未配置，无法整理笔记。");
+        setIsModalOpen(false);
+        return;
+    };
     setIsModalOpen(false);
     resetStateForAnalysis();
     setMode('notes');
@@ -422,17 +435,6 @@ const App = () => {
       }
     );
   };
-
-  if (!apiKey) {
-    return (
-      <div className="main-layout full-view">
-        <div className="api-key-container">
-          <h1>配置错误</h1>
-          <p>未能找到 API 密钥。请确保您已在 .env 文件中设置了 API_KEY 并重新构建了应用。</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`main-layout ${pdfFile ? 'split-view' : 'full-view'}`}>

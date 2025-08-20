@@ -36,49 +36,6 @@ body {
   align-items: flex-start;
 }
 
-/* API Key Input Screen */
-.api-key-container {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: center;
-  max-width: 600px;
-  margin: 40px auto;
-}
-.api-key-container h1 {
-  margin-bottom: 8px;
-}
-.api-key-container p {
-  color: #a0a0a0;
-  margin-bottom: 16px;
-  line-height: 1.6;
-}
-.api-key-input {
-  width: 100%;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  color: var(--text-color);
-  font-family: var(--font-family);
-  font-size: 14px;
-  padding: 12px;
-  box-sizing: border-box;
-  text-align: center;
-}
-.api-key-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-}
-.api-key-container .btn {
-  align-self: center;
-  margin-top: 8px;
-}
-
-
 /* PDF Viewer Panel */
 .pdf-viewer-panel {
   background-color: var(--surface-color);

@@ -7,11 +7,8 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 
-// Configure the worker for react-pdf using the locally installed package
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
+// Configure the worker for react-pdf using a reliable CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 // Define structures for the two different analysis modes
 interface WritingAnalysis {
@@ -28,8 +25,66 @@ interface NoteAnalysis {
   combinedText: string;
 }
 
+// Utility to normalize line endings for consistent string comparison
+const normalizeLineEndings = (str: string) => str.replace(/\r\n/g, '\n');
+
+// Diff calculation utility
+const calculateDiff = (original: string, revised: string): { value: string; type: 'added' | 'removed' | 'common' }[] => {
+    const originalWords = original.split(/(\s+)/);
+    const revisedWords = revised.split(/(\s+)/);
+
+    const matrix = Array(originalWords.length + 1).fill(0).map(() => Array(revisedWords.length + 1).fill(0));
+
+    for (let i = 1; i <= originalWords.length; i++) {
+        for (let j = 1; j <= revisedWords.length; j++) {
+            if (originalWords[i - 1] === revisedWords[j - 1]) {
+                matrix[i][j] = matrix[i - 1][j - 1] + 1;
+            } else {
+                matrix[i][j] = Math.max(matrix[i - 1][j], matrix[i][j - 1]);
+            }
+        }
+    }
+
+    const result: { value: string; type: 'added' | 'removed' | 'common' }[] = [];
+    let i = originalWords.length;
+    let j = revisedWords.length;
+
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && originalWords[i - 1] === revisedWords[j - 1]) {
+            result.unshift({ value: originalWords[i - 1], type: 'common' });
+            i--;
+            j--;
+        } else if (j > 0 && (i === 0 || matrix[i][j - 1] >= matrix[i - 1][j])) {
+            result.unshift({ value: revisedWords[j - 1], type: 'added' });
+            j--;
+        } else if (i > 0 && (j === 0 || matrix[i][j - 1] < matrix[i - 1][j])) {
+            result.unshift({ value: originalWords[i - 1], type: 'removed' });
+            i--;
+        } else {
+            // Should not happen, but as a fallback
+            break;
+        }
+    }
+    return result;
+};
+
+
+const DiffViewer = ({ original, revised }: { original: string, revised: string }) => {
+    const diffs = calculateDiff(original, revised);
+    return (
+        <div className="diff-viewer" aria-label="文本差异对比视图">
+            {diffs.map((diff, index) => (
+                <span key={index} className={`diff-${diff.type}`}>
+                    {diff.value}
+                </span>
+            ))}
+        </div>
+    );
+};
+
 const PDFViewer = ({ file, onClose }: { file: File, onClose: () => void }) => {
   const [numPages, setNumPages] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null); // New state for PDF-specific error
   const [containerWidth, setContainerWidth] = useState(0);
   const [isPdfTextBased, setIsPdfTextBased] = useState<boolean | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,8 +92,9 @@ const PDFViewer = ({ file, onClose }: { file: File, onClose: () => void }) => {
 
 
   useEffect(() => {
-    // Reset pages and detection state when file changes
+    // Reset pages, error, and detection state when file changes
     setNumPages(null);
+    setPdfError(null);
     setIsPdfTextBased(null);
     textLayerCheckedRef.current = false;
   }, [file]);
@@ -57,8 +113,14 @@ const PDFViewer = ({ file, onClose }: { file: File, onClose: () => void }) => {
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+    setPdfError(null); // Clear error on success
   };
   
+  const onDocumentLoadError = (error: Error) => {
+    console.error('Failed to load PDF:', error);
+    setPdfError('加载PDF文件失败。请确保文件未损坏并重试。');
+  };
+
   return (
     <div className="pdf-viewer-panel">
       <div className="pdf-viewer-header">
@@ -71,8 +133,14 @@ const PDFViewer = ({ file, onClose }: { file: File, onClose: () => void }) => {
         </div>
       )}
       <div className="pdf-document-container" ref={containerRef}>
-        <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={<div className="spinner-container"><div className="spinner"></div></div>}>
-          {numPages && containerWidth > 0 && Array.from(new Array(numPages), (el, index) => {
+        <Document 
+          file={file} 
+          onLoadSuccess={onDocumentLoadSuccess} 
+          onLoadError={onDocumentLoadError}
+          loading={<div className="spinner-container"><div className="spinner"></div></div>}
+          error={<div className="error-message">{pdfError || '加载PDF文件时发生未知错误。'}</div>}
+        >
+          {numPages && !pdfError && containerWidth > 0 && Array.from(new Array(numPages), (el, index) => {
             const pageProps: any = {
               key: `page_${index + 1}`,
               pageNumber: index + 1,
@@ -131,6 +199,10 @@ const App = () => {
   
   // Auto-paste state
   const lastPastedTextRef = useRef<string>('');
+  
+  // Diff view state
+  const [isDiffView, setIsDiffView] = useState(false);
+  const [originalTextForDiff, setOriginalTextForDiff] = useState('');
 
   const resetForNewText = useCallback((newText: string) => {
     setText(newText);
@@ -139,8 +211,9 @@ const App = () => {
     setEditableRevisedText('');
     setChat(null);
     setMode(null);
+    setIsDiffView(false);
     // Also update our ref so we don't paste it again
-    lastPastedTextRef.current = newText;
+    lastPastedTextRef.current = normalizeLineEndings(newText);
   }, []);
   
   // Effect for auto-scrolling the results textarea
@@ -156,11 +229,16 @@ const App = () => {
         // Only attempt to read clipboard if the document has focus and no modal is open
         if (document.hasFocus() && !isModalOpen) {
             try {
-                // The browser will likely require the user to grant permission for this to work automatically.
-                // This is a browser security feature that cannot be bypassed by code.
                 const clipboardText = await navigator.clipboard.readText();
+                const normalizedClipboardText = normalizeLineEndings(clipboardText);
 
-                if (clipboardText && clipboardText !== lastPastedTextRef.current) {
+                // To prevent unwanted resets, we check three conditions using normalized text:
+                // 1. The clipboard has text.
+                // 2. The clipboard text is not what we just copied from the app.
+                // 3. The clipboard text is not the same as what's already in the editor.
+                if (normalizedClipboardText &&
+                    normalizedClipboardText !== lastPastedTextRef.current &&
+                    normalizedClipboardText !== normalizeLineEndings(text)) {
                     resetForNewText(clipboardText);
                 }
             } catch (err) {
@@ -173,7 +251,7 @@ const App = () => {
     return () => {
         clearInterval(clipboardCheckInterval);
     };
-  }, [resetForNewText, isModalOpen]);
+  }, [resetForNewText, isModalOpen, text]);
 
   const handlePdfFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -191,15 +269,20 @@ const App = () => {
       setAnalysisResult(null);
       setEditableRevisedText('');
       setChat(null);
+      setIsDiffView(false);
   };
+  
+  const isApiKeyInvalid = !apiKey || apiKey === 'undefined';
 
   const handleGetWritingSuggestions = async () => {
-    if (!text || !apiKey) {
-        setError("API 密钥未配置，无法执行分析。");
+    if (isApiKeyInvalid) {
+        setError("API 密钥未配置或无效。请检查您的 .env.local 文件并重启服务。");
         return;
     };
+    if (!text) return;
     resetStateForAnalysis();
     setMode('writing');
+    setOriginalTextForDiff(text); // Save original text for diffing
 
     try {
       const ai = new GoogleGenAI({ apiKey });
@@ -273,11 +356,12 @@ const App = () => {
   };
 
   const handleProceedWithOrganization = async () => {
-    if (!text || !apiKey) {
-        setError("API 密钥未配置，无法整理笔记。");
+    if (isApiKeyInvalid) {
+        setError("API 密钥未配置或无效。请检查您的 .env.local 文件并重启服务。");
         setIsModalOpen(false);
         return;
     };
+    if (!text) return;
     setIsModalOpen(false);
     resetStateForAnalysis();
     setMode('notes');
@@ -369,6 +453,7 @@ const App = () => {
 
     const userMessage = chatInput;
     setChatInput('');
+    setIsDiffView(false); // Exit diff view when chatting
 
     const chatSeparator = '\n\n--- 对话 ---\n\n';
     const isFirstChatMessage = !editableRevisedText.includes(chatSeparator);
@@ -420,6 +505,9 @@ const App = () => {
 
   const handleCopyToClipboard = (textToCopy: string, buttonType: 'main' | 'revised') => {
     if (!textToCopy) return;
+    // By updating the ref with normalized text, we prevent the clipboard poller from
+    // re-pasting due to line ending differences.
+    lastPastedTextRef.current = normalizeLineEndings(textToCopy);
     navigator.clipboard.writeText(textToCopy).then(() => {
         if (buttonType === 'revised') {
           setRevisedCopyButtonText('已复制!');
@@ -504,14 +592,23 @@ const App = () => {
             {!isLoading && analysisResult && (
             <>
               <div className="revised-text-container">
-                  <textarea
-                      ref={resultsTextAreaRef}
-                      className="text-area revised-text-area"
-                      value={editableRevisedText}
-                      onChange={(e) => setEditableRevisedText(e.target.value)}
-                      aria-label="可编辑的最终文本区域"
-                  />
+                  {isDiffView && mode === 'writing' && 'revisedText' in analysisResult ? (
+                      <DiffViewer original={originalTextForDiff} revised={analysisResult.revisedText} />
+                  ) : (
+                      <textarea
+                          ref={resultsTextAreaRef}
+                          className="text-area revised-text-area"
+                          value={editableRevisedText}
+                          onChange={(e) => setEditableRevisedText(e.target.value)}
+                          aria-label="可编辑的最终文本区域"
+                      />
+                  )}
                   <div className="revised-text-actions">
+                      {mode === 'writing' && (
+                          <button className="btn btn-secondary" onClick={() => setIsDiffView(!isDiffView)}>
+                              {isDiffView ? '返回编辑' : '对比差异'}
+                          </button>
+                      )}
                       <button className="btn btn-secondary" onClick={handleSaveAsTxt}>导出为 .txt</button>
                       <button className="btn btn-secondary" onClick={() => handleCopyToClipboard(editableRevisedText, 'revised')}>{revisedCopyButtonText}</button>
                   </div>

@@ -1,3 +1,4 @@
+
 :root {
   --background-color: #121212;
   --surface-color: #1e1e1e;
@@ -8,6 +9,8 @@
   --error-color: #e81123;
   --font-family: 'Segoe UI', 'Microsoft YaHei', Tahoma, Geneva, Verdana, sans-serif;
   --border-radius: 8px;
+  --diff-add-bg: rgba(40, 167, 69, 0.2);
+  --diff-remove-bg: rgba(220, 53, 69, 0.2);
 }
 
 body {
@@ -298,10 +301,39 @@ h4 {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .revised-text-area {
     min-height: 300px;
+}
+
+/* Diff Viewer Styles */
+.diff-viewer {
+    width: 100%;
+    min-height: 300px;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 16px;
+    padding: 12px;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    line-height: 1.6;
+    overflow-y: auto;
+}
+
+.diff-added {
+    background-color: var(--diff-add-bg);
+    border-radius: 3px;
+}
+
+.diff-removed {
+    background-color: var(--diff-remove-bg);
+    text-decoration: line-through;
+    border-radius: 3px;
 }
 
 /* Chat Styles */

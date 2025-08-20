@@ -1,24 +1,27 @@
 {
-  "name": "gemini-ai-assistant",
-  "version": "1.0.0",
+  "name": "text-assistant",
   "private": true,
-  "description": "A web-based assistant for writing and note-taking powered by Gemini.",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@google/genai": "^1.14.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@google/genai": "^0.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-pdf": "^9.1.0",
+    "pdfjs-dist": "^4.4.168"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "gh-pages": "^6.3.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
   }
 }

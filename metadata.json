@@ -1,5 +1,6 @@
 {
-  "name": "信息处理助手",
-  "description": "",
-  "requestFramePermissions": []
+  "name": "Information Processing AssistantV1.12",
+  "description": "An assistant to correct writing and organize fragmented notes.",
+  "requestFramePermissions": [],
+  "prompt": ""
 }

@@ -1,22 +1,31 @@
 {
-  "name": "智能写作与笔记助手",
+  "homepage": "https://yc4805551.github.io/IEtxt",
+  "name": "text-assistant",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yc4805551/IEtxt.git"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.14.0",
-    "htm": "^3.1.1",
-    "preact": "^10.27.0",
-    "marked": "^14.0.0"
+    "@google/genai": "^0.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-pdf": "^9.1.0",
+    "pdfjs-dist": "^4.4.168"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
   }
 }
